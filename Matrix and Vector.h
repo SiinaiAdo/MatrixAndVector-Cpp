@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cmath>
+#include <cassert>
 
 class Vector3f{
     friend Vector3f operator+(Vector3f lv,const Vector3f& rv);
@@ -45,6 +46,7 @@ public:
     static Matrix4f rotationY(float angleRad);
     static Matrix4f rotationZ(float angleRad);
     Vector3f operator*(const Vector3f&)const;
+    Vector3f transformVector(const Vector3f& v) const;
 };
 
 
@@ -66,11 +68,12 @@ inline Matrix4f::Matrix4f(const float (&values)[4][4]){
     }
 }
 inline float& Matrix4f::operator()(int i, int j){
-    return m[i*4+j];
+    assert(i >= 0 && i < 4 && j >= 0 && j < 4);
+    return m[i*4 + j];
 }
 inline const float& Matrix4f::operator()(int i, int j)const {
-
-    return m[i*4+j];
+    assert(i >= 0 && i < 4 && j >= 0 && j < 4);
+    return m[i*4 + j];
 }
 inline Matrix4f& Matrix4f::operator+=(const Matrix4f& rm){
     for(int i=0;i<4;i++){
@@ -155,14 +158,15 @@ inline Matrix4f Matrix4f::operator*(const Matrix4f& rm) const{
 }
 inline Vector3f Matrix4f::operator*(const Vector3f& v)const{
     Vector3f ans;
-    float w=(*this)(3,0)*v(0)+(*this)(3,1)*v(1)+(*this)(3,2)*v(2)+(*this)(3,3);
     for(int i=0;i<3;i++){
         ans(i)=(*this)(i,0)*v(0)+(*this)(i,1)*v(1)+(*this)(i,2)*v(2)+(*this)(i,3);
     }
-    if(w!=0){
-        for(int i=0;i<3;i++){
-            ans(i)/=w;
-        }
+    return ans;
+}
+inline Vector3f Matrix4f::transformVector(const Vector3f& v) const {
+    Vector3f ans;
+    for(int i=0;i<3;i++){
+        ans(i) = (*this)(i,0)*v(0) + (*this)(i,1)*v(1) + (*this)(i,2)*v(2);
     }
     return ans;
 }
@@ -175,15 +179,15 @@ inline Vector3f::Vector3f(float a,float b,float c){
     x=a;y=b;z=c;
 }
 inline Vector3f& Vector3f::operator+=(const Vector3f& rv){
-    (*this).x+=rv.x;
-    (*this).y+=rv.y;
-    (*this).z+=rv.z;
+    x+=rv.x;
+    y+=rv.y;
+    z+=rv.z;
     return *this;
 }
 inline Vector3f& Vector3f::operator-=(const Vector3f& rv){
-    (*this).x-=rv.x;
-    (*this).y-=rv.y;
-    (*this).z-=rv.z;
+    x-=rv.x;
+    y-=rv.y;
+    z-=rv.z;
     return *this;
 }
 inline Vector3f operator+(Vector3f lv,const Vector3f& rv){
@@ -198,6 +202,9 @@ inline Vector3f Vector3f::operator*(float f)const{
     ans.y*=f;
     ans.z*=f;
     return ans;
+}
+inline Vector3f operator*(float scalar, const Vector3f& v) {
+    return v * scalar;
 }
 inline float Vector3f::dot(const Vector3f& rv)const{
     float ans=0;
@@ -219,7 +226,7 @@ inline float Vector3f::length()const{
 inline Vector3f Vector3f::normalized()const{
     Vector3f ans;
     float L=(*this).length();
-    if(L!=0){
+    if(L>1e-6f){
         ans.x=x/L;
         ans.y=y/L;
         ans.z=z/L;
@@ -227,32 +234,19 @@ inline Vector3f Vector3f::normalized()const{
     return ans;
 }
 inline const float& Vector3f::operator()(int i)const{
-    if(i==0){
-        return x;
-    }else if(i==1){
-        return y;
-    }else if(i==2){
-        return z;
-    }else{
-        std::cout<<"out of bounds access"<<std::endl;
-        return x;
-    }
+    assert(i >= 0 && i < 3);
+    if(i == 0) return x;
+    if(i == 1) return y;
+return z;
 }
 inline float& Vector3f::operator()(int i){
-    if(i==0){
-        return x;
-    }else if(i==1){
-        return y;
-    }else if(i==2){
-        return z;
-    }else{
-        std::cout<<"out of bounds access"<<std::endl;
-        return x;
-    }
+    assert(i >= 0 && i < 3);
+    if(i == 0) return x;
+    if(i == 1) return y;
+    return z;
 }
 inline void Vector3f::show()const{
     std::cout<<x<<' '<<y<<' '<<z<<' '<<std::endl;
 }
-
 
 #endif
