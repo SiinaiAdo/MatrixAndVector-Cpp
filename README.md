@@ -41,7 +41,8 @@
 - 加法：`operator+` / `operator+=`
 - 减法：`operator-` / `operator-=`
 - 矩阵乘法：`operator*(const Matrix4f&)`
-- 矩阵乘向量：`operator*(const Vector3f&)`，含齐次坐标与透视除法
+- 矩阵乘向量（点变换）：`operator*(const Vector3f&)`，将向量视为点（w = 1），包含平移
+- 方向向量变换：`transformVector(const Vector3f&)`，将向量视为方向（w = 0），忽略平移
 - 索引访问：`operator()(int i, int j)`
 - 调试输出：`show()`
 - 平移矩阵：`static translation(tx, ty, tz)`
@@ -53,14 +54,14 @@
 ```
 MiniMathLib/
 ├── include/
-│   └── matrix_and_vector.h    # 数学库唯一头文件
+│   └── Matrix and Vector.h    # 数学库唯一头文件
 ├── src/
 │   └── main.cpp               # 使用示例与测试入口（可选）
 ├── README.md
 └── LICENSE
 ```
 
-所有实现均为 `inline`，只需包含 `matrix_and_vector.h` 即可使用。
+所有实现均为 `inline`，只需包含 `Matrix and Vector.h` 即可使用。
 
 ## 快速开始
 
@@ -84,7 +85,7 @@ g++ -std=c++11 -O2 -Iinclude src/main.cpp -o demo
 ### 向量基本运算
 
 ```cpp
-#include "matrix_and_vector.h"
+#include "Matrix and Vector.h"
 
 int main() {
     Vector3f a(1, 0, 0);
@@ -104,7 +105,7 @@ int main() {
 ### 矩阵变换组合
 
 ```cpp
-#include "matrix_and_vector.h"
+#include "Matrix and Vector.h"
 
 int main() {
     Matrix4f S = Matrix4f::scale(2, 2, 2);
@@ -114,8 +115,12 @@ int main() {
     Matrix4f M = T * R * S;   // 注意乘法顺序
 
     Vector3f p(1, 0, 0);
-    Vector3f p_transformed = M * p;
+    Vector3f p_transformed = M * p;   // 点变换，包含平移
     p_transformed.show();
+
+    Vector3f dir(1, 0, 0);
+    Vector3f dir_transformed = M.transformVector(dir); // 方向变换，忽略平移
+    dir_transformed.show();
 
     return 0;
 }
@@ -125,9 +130,12 @@ int main() {
 
 1. 旋转角度使用弧度：所有旋转工厂函数参数均为弧度制。
 2. 矩阵乘法顺序：`A * B` 表示先应用 B，再应用 A。
-3. 浮点数比较：透视除法中使用了 `w != 0` 判断，实际工程中建议改为 `std::abs(w) > 1e-6f`。
-4. 矩阵乘向量的语义：当前 `operator*(const Vector3f&)` 将向量视为点（w = 1），适用于顶点变换。如需变换法线（w = 0），需扩展新接口。
-5. 索引越界：`Vector3f::operator()` 对越界索引会输出错误信息并返回第一个分量，建议仅在调试阶段使用。
+3. 零向量归一化：`normalized()` 对零向量返回零向量，内部使用长度阈值 `1e-6f`。
+4. 矩阵乘向量的语义：
+   - `operator*(const Vector3f&)` 将向量视为点（w = 1），包含平移，适用于顶点变换。
+   - `transformVector(const Vector3f&)` 将向量视为方向（w = 0），忽略平移，适用于方向向量变换。
+5. 索引越界：`Vector3f::operator()` 和 `Matrix4f::operator()` 使用 `assert` 检查，越界在调试模式下触发断言；发布模式下请确保索引合法。
+6. 当前矩阵乘向量返回 `Vector3f`，不保留 `w` 分量，也不进行透视除法。如需完整齐次坐标变换，可自行扩展 `Vector4f` 或相关接口。
 
 ## 设计细节
 
@@ -148,11 +156,12 @@ int main() {
 - [x] Vector3f 基础运算（加减、点乘、叉乘、归一化）
 - [x] Matrix4f 基础运算（构造、加法、乘法）
 - [x] 静态工厂函数（平移、缩放、旋转）
+- [x] 方向向量变换接口（`transformVector`，w = 0）
 - [ ] 转置（transpose）
 - [ ] 求逆（inverse）
 - [ ] 行列式（determinant）
 - [ ] 透视投影矩阵、视图矩阵工厂函数
-- [ ] 法线变换接口（w = 0）
+- [ ] 法线变换接口（逆转置矩阵）
 - [ ] 泛型模板版本（Matrix3f、Matrix2f）
 
 ## 参考资料
@@ -164,6 +173,7 @@ int main() {
 本项目基于 MIT License 开源，可自由使用、修改、分发。
 
 ## 作者
+
 Siina
 
 NJU计算机大一学生
